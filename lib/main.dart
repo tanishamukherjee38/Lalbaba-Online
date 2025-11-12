@@ -1,122 +1,206 @@
+
+import 'dart:io' show Platform, exit;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'
+    show SystemNavigator, SystemChrome, SystemUiOverlayStyle;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+const String kStartUrl = 'https://www.lalbabaonline.com/';
+const Color appRed = Color(0xFFf70707);
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const LalbabaApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class LalbabaApp extends StatelessWidget {
+  const LalbabaApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'LALBABA ONLINE',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(useMaterial3: true),
+      home: const SplashScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+// ===================== Splash Screen =====================
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap();
+  }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  Future<void> _bootstrap() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LalbabaHome()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: 
+          CircleAvatar(backgroundImage: AssetImage("lib/assets/logo-icon.png"),radius: 75,) ,
+        // child: const Text(
+        //   'Lalbaba',
+        //   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        // ),
+      ),
+    );
+  }
+}
+
+// ===================== Home (WebView) =====================
+class LalbabaHome extends StatefulWidget {
+  const LalbabaHome({super.key});
+
+  @override
+  State<LalbabaHome> createState() => _LalbabaHomeState();
+}
+
+class _LalbabaHomeState extends State<LalbabaHome> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // For Flutter Web
+    if (kIsWeb) {
+      _launchInSameTab(Uri.parse(kStartUrl));
+      return;
+    }
+
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (req) {
+            final uri = Uri.parse(req.url);
+            final isLalbaba = uri.host.contains('lalbabaonline.com');
+            if (!isLalbaba) {
+              _launchExternally(uri);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(kStartUrl));
+  }
+
+  Future<void> _launchExternally(Uri uri) async {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open link')),
+        );
+      }
+    }
+  }
+
+  void _launchInSameTab(Uri uri) {
+    launchUrl(uri, webOnlyWindowName: '_self');
+  }
+
+  Future<void> _exitApp() async {
+    if (kIsWeb) return;
+    if (Platform.isAndroid) {
+      SystemNavigator.pop();
+    } else {
+      // Apple discourages programmatic exit
+      exit(0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ make status bar + nav bar same red as app
+
+    if (kIsWeb) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: appRed,
+        statusBarIconBrightness: Brightness.light,
+      ),
+      child: PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (didPop) return;
+
+          if (await _controller.canGoBack()) {
+            await _controller.goBack();
+          } else {
+            if (!mounted) return;
+            final shouldExit = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => AlertDialog(
+                    shape: BeveledRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(2)),
+                    // title: const Text('Exit app?'),
+                    contentTextStyle:
+                        TextStyle(fontSize: 17, color: Colors.black),
+                    content: const Text('Do you want to exit?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('No'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Yes'),
+                      ),
+                    ],
+                  ),
+                ) ??
+                false;
+
+            if (shouldExit) {
+              await _exitApp();
+            }
+          }
+        },
+        child: Scaffold(
+          // backgroundColor: appRed, // same red as status bar
+          appBar: AppBar(
+            backgroundColor: appRed,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+            toolbarHeight: 0, // invisible appbar to keep status bar red
+          ),
+          body: RefreshIndicator(
+            onRefresh: () => _controller.reload(),
+            child: WebViewWidget(controller: _controller),
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
